@@ -14,15 +14,16 @@ module GGTracker
     def self.factory(item)
       return item if item.class == self.class
       preinit
-      if item.class == String
+      case item
+      when String
         item = JSON.parse(item)
         id = item['id']
-      elsif item.class == Fixnum
+      when Fixnum
         id = item
-      elsif item.class == Hash
+      when Hash
         id = item['id']
       else
-        return nil
+        raise ArgumentError, "#{self}.factory accepts only String, Fixnum or Hash"
       end
       if @@cache[self].keys.include?(id)
         return @@cache[self][id]
