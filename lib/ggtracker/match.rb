@@ -94,10 +94,9 @@ module GGTracker
       if player_or_team.class == GGTracker::Identity
         return false if not player?(player_or_team)
       end
-      if not won?(player_or_team)
-        return false if winners.empty? # draw
-        return true
-      end
+      return false if won?(player_or_team)
+      return false if winners.empty? # draw
+      return true
     end
 
     # Returns true if the players given are on opposing teams
