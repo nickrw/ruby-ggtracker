@@ -6,18 +6,27 @@ module GGTracker
 
   class InternalLadder
 
-    attr_reader :matches, :players
+    attr_reader :matches, :players, :blacklist
 
     def initialize(type=:all, *players)
       @type = type
+      @blacklist = Set.new
+      @blacklist_time = []
       @player_set = players.sort.uniq.to_set
       @matches = []
       @autoblock = nil
       reset_ranks
     end
 
+    def discover_all_matches
+      @player_set.each do |player|
+        GGTracker::API.matches(player.id, false, @type).all
+      end
+    end
+
     def automatic
       manual if not @autoblock.nil?
+      discover_all_matches
       self.matches = GGTracker::Match.cache.values
       @autoblock = lambda { |m| play(m) }
       GGTracker::Match.subscribe(&@autoblock)
@@ -29,6 +38,42 @@ module GGTracker
       end
     end
 
+    def blacklist(match)
+      if match.class != Array
+        match = [match]
+      end
+      match.each do |m|
+        if m.class != GGTracker::Match && m.class != Fixnum
+          raise ArgumentError, "#blacklist expects a GGTracker::Match or Fixnum match ID, or an array of same"
+        end
+        m = GGTracker::Match.factory(m)
+        @blacklist << m
+        recalc = @matches.delete(m) || recalc
+      end
+      recalculate! unless recalc.nil?
+    end
+
+    def blacklist_time_range(range)
+      if range.class != Range
+        raise ArgumentError, "#blacklist_time_range expects a Range"
+      end
+      [range.first.class, range.end.class].each do |exp_time|
+        if exp_time != Time
+          raise ArgumentError, "#blacklist_time_range expects a Range of Time"
+        end
+      end
+      @blacklist_time << range
+      validate!
+    end
+
+    def blacklist_before(time)
+      blacklist_time_range(Time.at(0)..time)
+    end
+
+    def blacklist_after(time)
+      blacklist_time_range(time..Time.now)
+    end
+
     def add_player(identity)
       @player_set << identity
       recalculate!
@@ -37,7 +82,7 @@ module GGTracker
     def remove_player(identity)
       @player_set.delete(identity)
       @players.delete(identity)
-      revalidate!
+      validate!
     end
 
     def change_type(new_type)
@@ -53,9 +98,9 @@ module GGTracker
       @matches
     end
 
-    def revalidate!
-      original_matches = @matches
-      replacement_matches = @matches
+    def validate!
+      original_matches = @matches.dup
+      replacement_matches = @matches.dup
       @matches = []
       replacement_matches.delete_if { |m| not valid_match?(m) }
       @matches = replacement_matches
@@ -108,6 +153,14 @@ module GGTracker
 
       # Discount the game if it involves any players not in our player list
       return false if not m.players.subset?(@player_set)
+
+      # This match has been explicitly blacklisted from our ladder
+      return false if @blacklist.include?(m)
+
+      # This match has been blacklisted because of when it happened
+      @blacklist_time.each do |time_range|
+        return false if time_range.cover?(m.ts)
+      end
 
       # LGTM
       return true
