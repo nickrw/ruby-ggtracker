@@ -1,8 +1,9 @@
 require 'json'
 require 'httparty'
+require 'ggtracker/api'
 require 'ggtracker/match'
 require 'ggtracker/identity'
-require 'ggtracker/api'
+require 'ggtracker/internalladder'
 
 module GGTracker
 
