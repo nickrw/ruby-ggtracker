@@ -26,6 +26,12 @@ module GGTracker
       end
     end
 
+    def self.factory(item)
+      result = super
+      return result if not result.nil?
+      GGTracker::API.single_match(item)
+    end
+
     def initialize(match_hash)
       super
       @type = @data['game_type']

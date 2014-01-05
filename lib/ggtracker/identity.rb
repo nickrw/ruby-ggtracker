@@ -9,6 +9,12 @@ module GGTracker
     attr_reader :name, :matches, :url
     attr_accessor :alias
 
+    def self.factory(item)
+      result = super
+      return result if not result.nil?
+      GGTracker::API.identity(item)
+    end
+
     def initialize(id_hash)
       super
       @name = @data['name']
