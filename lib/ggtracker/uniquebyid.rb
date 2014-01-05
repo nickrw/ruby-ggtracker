@@ -12,8 +12,11 @@ module GGTracker
     end
 
     def self.factory(item)
+      # throw it right back at you if it's already one of us
       return item if item.class == self.class
       preinit
+
+      # Supported input classes, to fetch the item ID
       case item
       when String
         item = JSON.parse(item)
@@ -25,14 +28,20 @@ module GGTracker
       else
         raise ArgumentError, "#{self}.factory accepts only String, Fixnum or Hash"
       end
+
+      # return the item we have cached, if any
       if @@cache[self].keys.include?(id)
         return @@cache[self][id]
       end
+
+      # If not cached, do our best
       if item.class == Hash
+        # Create a new one, seeing as we have the data to do so
         return self.new(item)
       else
         return nil
       end
+
     end
 
     def self.cache
