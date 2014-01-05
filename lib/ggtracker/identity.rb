@@ -106,7 +106,9 @@ module GGTracker
     attr_reader :identity, :wins, :losses
 
     def initialize(identity)
-      raise ArgumentError if identity.class != GGTracker::Identity
+      if identity.class != GGTracker::Identity
+        raise ArgumentError, "#{self.class}.initialize expects a GGTracker::Identity object"
+      end
       @identity = identity
       @wins = 0
       @losses = 0
@@ -145,7 +147,7 @@ module GGTracker
     end
 
     def inspect
-      "#<#{self.class}:0x%x #{@identity.name} (#{elo_rank})>" % (self.object_id << 1)
+      "#<#{self.class}:0x%x #{@identity.name} (#{rank})>" % (self.object_id << 1)
     end
 
   end
