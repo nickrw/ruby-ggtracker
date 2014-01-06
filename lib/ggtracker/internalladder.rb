@@ -42,6 +42,7 @@ module GGTracker
       if match.class != Array
         match = [match]
       end
+      recalc = nil
       match.each do |m|
         if m.class != GGTracker::Match && m.class != Fixnum
           raise ArgumentError, "#blacklist expects a GGTracker::Match or Fixnum match ID, or an array of same"
