@@ -49,9 +49,8 @@ module GGTracker
         end
         m = GGTracker::Match.factory(m)
         @blacklist << m
-        recalc = @matches.delete(m) || recalc
       end
-      recalculate! unless recalc.nil?
+      recalculate!
     end
 
     def blacklist_time_range(range)
@@ -155,9 +154,6 @@ module GGTracker
       # Discount the game if it involves any players not in our player list
       return false if not m.players.subset?(@player_set)
 
-      # This match has been explicitly blacklisted from our ladder
-      return false if @blacklist.include?(m)
-
       # This match has been blacklisted because of when it happened
       @blacklist_time.each do |time_range|
         return false if time_range.cover?(m.ts)
@@ -196,21 +192,24 @@ module GGTracker
 
     def apply_match_delta(match)
       prev_ranks = Hash[match.players.map { |p| [p, @players[p][:ranked].rank] }]
-      match.winners.each do |winner|
-        @players[winner][:ranked].win_match
-        match.losers.each do |loser|
-          @players[winner][:ranked].win_vs(@players[loser][:ranked])
+      unless @blacklist.include?(match)
+        match.winners.each do |winner|
+          @players[winner][:ranked].win_match
+          match.losers.each do |loser|
+            @players[winner][:ranked].win_vs(@players[loser][:ranked])
+          end
         end
-      end
-      match.losers.each do |loser|
-        @players[loser][:ranked].lose_match
+        match.losers.each do |loser|
+          @players[loser][:ranked].lose_match
+        end
       end
       prev_ranks.each do |player, oldrank|
         @players[player][:change][match] = {
           :oldrank  => oldrank,
           :newrank  => @players[player][:ranked].rank,
           :seeded   => (oldrank == 0 && @players[player][:ranked].rank != 0),
-          :diffrank => @players[player][:ranked].rank - oldrank
+          :diffrank => @players[player][:ranked].rank - oldrank,
+          :blacklist => @blacklist.include?(match)
         }
       end
     end
